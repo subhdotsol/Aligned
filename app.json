@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "aligned",
+    "name": "Aligned",
     "slug": "aligned",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,14 +10,15 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.subhdotsol.stackshow"
+      "bundleIdentifier": "com.subhdotsol.aligned"
     },
     "android": {
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logo.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.subhdotsol.stackshow"
+      "package": "com.subhdotsol.aligned"
     },
     "web": {
       "bundler": "metro",
@@ -26,15 +27,8 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/logo.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
-        }
-      ]
+      "expo-video",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
@@ -42,8 +36,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "19ac10ff-84ed-4b18-acda-fd08bbb12d4c"
+        "projectId": "f96a6157-d6a8-4c71-b324-4e03b983423f"
       }
-    }
+    },
+    "owner": "subhdotsol"
   }
 }
