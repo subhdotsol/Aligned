@@ -1,8 +1,12 @@
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import './globals.css';
+
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
@@ -11,6 +15,12 @@ export default function RootLayout() {
     "Tinos": require("@/assets/fonts/Tinos-Regular.ttf"),
     "Tinos-Bold": require("@/assets/fonts/Tinos-Bold.ttf"),
   });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
 
   if (!fontsLoaded) {
     return null;
@@ -22,6 +32,7 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="auth" />
       </Stack>
     </SafeAreaProvider>
   );

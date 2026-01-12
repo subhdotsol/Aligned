@@ -1,5 +1,6 @@
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Image,
@@ -12,11 +13,12 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
 
-const PROFILE_IMAGE = { uri: "https://images.unsplash.com/photo-1542596594-649edbc13630?q=80&w=3087&auto=format&fit=crop" };
+const PROFILE_IMAGE = { uri: "https://avatars.githubusercontent.com/u/77573811?v=4" };
 
 type Tab = "Get more" | "Safety" | "My Aligned";
 
 export default function Profile() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("Get more");
 
   return (
@@ -25,13 +27,16 @@ export default function Profile() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Header */}
           <View style={styles.header}>
-            <View style={styles.headerIcons}>
-              <TouchableOpacity>
-                <Ionicons name="options-outline" size={24} color="#000" />
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <Ionicons name="settings-outline" size={24} color="#000" />
-              </TouchableOpacity>
+            <View style={styles.headerContent}>
+              <Text style={styles.headerLogo}>Align</Text>
+              <View style={styles.headerRightIcons}>
+                <TouchableOpacity onPress={() => router.push('/dating-preferences')}>
+                  <Ionicons name="options-outline" size={24} color="#000" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/settings')}>
+                  <Ionicons name="settings-outline" size={24} color="#000" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.profileInfo}>
@@ -240,15 +245,25 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Space for tab bar
   },
   header: {
-    alignItems: "center",
     paddingHorizontal: 20,
     marginBottom: 20,
   },
-  headerIcons: {
+  headerContent: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "center",
     width: "100%",
-    marginBottom: 10,
+    marginBottom: 20,
+  },
+  headerLogo: {
+    fontFamily: "Tinos-Bold",
+    fontSize: 28,
+    color: "#000",
+  },
+  headerRightIcons: {
+    flexDirection: "row",
+    gap: 16,
+    alignItems: "center",
   },
   profileInfo: {
     alignItems: "center",

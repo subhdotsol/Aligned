@@ -1,0 +1,219 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import {
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+
+export default function VerificationScreen() {
+    const router = useRouter();
+    const [code, setCode] = useState("");
+
+    const handleNext = () => {
+        router.push("/auth/interstitial");
+    };
+
+    // Auto-advance if 6 digits
+    const handleTextChange = (text: string) => {
+        setCode(text);
+        if (text.length === 6) {
+            // Simulate slight delay/check
+            setTimeout(() => {
+                router.push("/auth/interstitial");
+            }, 500);
+        }
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.keyboardAvoidingView}
+            >
+                <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <Ionicons name="chevron-back" size={28} color="#000" />
+                </TouchableOpacity>
+
+                <View style={styles.content}>
+                    {/* Header Icon */}
+                    <View style={styles.iconContainer}>
+                        <Ionicons name="shield-checkmark-outline" size={32} color="#000" />
+                    </View>
+
+                    {/* Title */}
+                    <Text style={styles.title}>Enter your verification{"\n"}code</Text>
+
+                    <View style={styles.subtitleRow}>
+                        <Text style={styles.subtitle}>Sent to +91 8797020865 • </Text>
+                        <TouchableOpacity>
+                            <Text style={styles.editLink}>Edit</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Code Input (Simplified approach: Hidden TextInput + Visible Blocks) */}
+                    <View style={styles.codeContainer}>
+                        {/* Visible Blocks */}
+                        <View style={styles.blocksContainer}>
+                            {[0, 1, 2, 3, 4, 5].map((index) => (
+                                <View key={index} style={[styles.codeBlock, code[index] ? styles.codeBlockFilled : null]}>
+                                    <Text style={styles.codeText}>{code[index] || ""}</Text>
+                                    <View style={styles.blockLine} />
+                                </View>
+                            ))}
+                        </View>
+
+                        {/* Hidden Input overlaid */}
+                        <TextInput
+                            style={styles.hiddenInput}
+                            keyboardType="number-pad"
+                            maxLength={6}
+                            autoFocus
+                            value={code}
+                            onChangeText={handleTextChange}
+                            caretHidden
+                        />
+                    </View>
+                </View>
+
+                {/* Footer nav */}
+                <View style={styles.footer}>
+                    <TouchableOpacity>
+                        <Text style={styles.resendText}>Didn't get a code?</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.fab, code.length < 6 && styles.fabDisabled]}
+                        onPress={handleNext}
+                        disabled={code.length < 6}
+                    >
+                        <Ionicons name="chevron-forward" size={28} color={code.length < 6 ? "#999" : "#fff"} />
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: "#fff",
+    },
+    keyboardAvoidingView: {
+        flex: 1,
+    },
+    backButton: {
+        padding: 16,
+    },
+    content: {
+        flex: 1,
+        paddingHorizontal: 24,
+        paddingTop: 40,
+    },
+    iconContainer: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        borderWidth: 2,
+        borderColor: "#000",
+        justifyContent: "center",
+        alignItems: "center",
+        marginBottom: 24,
+    },
+    title: {
+        fontSize: 32,
+        fontWeight: "900",
+        fontFamily: "NunitoSans",
+        color: "#000",
+        marginBottom: 16,
+        lineHeight: 40,
+    },
+    subtitleRow: {
+        flexDirection: 'row',
+        marginBottom: 48,
+    },
+    subtitle: {
+        fontSize: 15,
+        color: "#666",
+        fontFamily: "NunitoSans",
+    },
+    editLink: {
+        fontSize: 15,
+        color: "#8B5A9C", // Brand color
+        fontWeight: '700',
+        fontFamily: "NunitoSans",
+    },
+    codeContainer: {
+        position: 'relative',
+        height: 60,
+        justifyContent: 'center',
+    },
+    blocksContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    codeBlock: {
+        width: 40,
+        alignItems: 'center',
+    },
+    codeBlockFilled: {
+        // Active state styles
+    },
+    codeText: {
+        fontSize: 24,
+        fontWeight: '700',
+        fontFamily: "NunitoSans",
+        color: '#000',
+        marginBottom: 8,
+    },
+    blockLine: {
+        width: '100%',
+        height: 2,
+        backgroundColor: '#000',
+    },
+    hiddenInput: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0, // Invisible but clickable
+    },
+    footer: {
+        padding: 24,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    resendText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#4B0082', // Dark Purple
+        fontFamily: "NunitoSans",
+    },
+    fab: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: "#000",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    fabDisabled: {
+        backgroundColor: "#f0f0f0",
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+});

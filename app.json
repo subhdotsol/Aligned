@@ -1,12 +1,17 @@
 {
   "expo": {
-    "name": "Aligned",
+    "name": "Align",
     "slug": "aligned",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.png",
-    "scheme": "aligned",
+    "icon": "./assets/icons/logo.png",
+    "scheme": "align",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#ffffff"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
@@ -15,15 +20,15 @@
     "android": {
       "versionCode": 1,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/icons/logo.png",
+        "backgroundColor": "#000000"
       },
       "package": "com.subhdotsol.aligned"
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/logo.png"
+      "favicon": "./assets/icons/logo.png"
     },
     "plugins": [
       "expo-router",

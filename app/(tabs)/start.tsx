@@ -1,6 +1,7 @@
 import { profiles } from "@/data/profiles";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
     Dimensions,
@@ -12,21 +13,23 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-const CARD_WIDTH = width * 0.85;
-const CARD_HEIGHT = CARD_WIDTH * 1.55;
-
-// Get first 5 profiles for standouts
-const standoutProfiles = profiles.slice(0, 5);
+const { width, height } = Dimensions.get("window");
+const CARD_WIDTH = width * 0.9;
+// Calculate height to fill most of the screen above navbar (approx 80-100px for nav)
+// Header is approx 60px, top inset approx 50px.
+// Reduce height to 65% to add spacing above navbar
+const CARD_HEIGHT = height * 0.65;
 
 export default function Start() {
+    const router = useRouter();
+
     return (
         <View style={styles.container}>
             <SafeAreaView style={styles.safeArea} edges={["top"]}>
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
-                        <Text style={styles.headerTitle}>Standouts</Text>
+                        <Text style={styles.headerTitle}>Featured</Text>
                         <TouchableOpacity style={styles.infoButton}>
                             <Ionicons name="information-circle-outline" size={20} color="#666" />
                         </TouchableOpacity>
@@ -37,16 +40,22 @@ export default function Start() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Horizontally Scrollable Standouts */}
+                {/* Horizontally Scrollable Featured */}
                 <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
-                    snapToInterval={CARD_WIDTH + 12}
+                    snapToInterval={CARD_WIDTH + 12} // Card width + gap
                     decelerationRate="fast"
+                    pagingEnabled={false}
                 >
-                    {standoutProfiles.map((profile, index) => (
-                        <View key={profile.id} style={styles.cardContainer}>
+                    {profiles.map((profile, index) => (
+                        <TouchableOpacity
+                            key={profile.id}
+                            style={styles.cardContainer}
+                            activeOpacity={0.9}
+                            onPress={() => router.push(`/user/${profile.id}`)}
+                        >
                             {/* Profile Image */}
                             <View style={styles.imageContainer}>
                                 <Image
@@ -58,7 +67,7 @@ export default function Start() {
                                 <View style={styles.nameOverlay}>
                                     <Text style={styles.profileName}>{profile.name}</Text>
                                     <View style={styles.verifiedBadge}>
-                                        <Ionicons name="checkmark-circle" size={20} color="#8B5A9C" />
+                                        <Ionicons name="checkmark-circle" size={24} color="#8B5A9C" />
                                     </View>
                                 </View>
                             </View>
@@ -68,30 +77,16 @@ export default function Start() {
                                 <Text style={styles.promptQuestion}>
                                     {profile.prompts[0]?.question}
                                 </Text>
-                                <Text style={styles.promptAnswer}>
+                                <Text style={styles.promptAnswer} numberOfLines={3}>
                                     {profile.prompts[0]?.answer}
                                 </Text>
                                 {/* Rose Button */}
                                 <TouchableOpacity style={styles.roseButton}>
-                                    <Ionicons name="rose-outline" size={20} color="#666" />
+                                    <Ionicons name="rose-outline" size={24} color="#666" />
                                 </TouchableOpacity>
                             </View>
-                        </View>
+                        </TouchableOpacity>
                     ))}
-
-                    {/* Upgrade Card */}
-                    <View style={styles.cardContainer}>
-                        <View style={styles.upgradeCard}>
-                            <Ionicons name="refresh" size={48} color="#8B5A9C" />
-                            <Text style={styles.upgradeTitle}>Upgrade to refresh</Text>
-                            <Text style={styles.upgradeSubtitle}>
-                                Get new standouts and more features
-                            </Text>
-                            <TouchableOpacity style={styles.upgradeButton}>
-                                <Text style={styles.upgradeButtonText}>See Plans</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
                 </ScrollView>
             </SafeAreaView>
         </View>
@@ -146,13 +141,16 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingBottom: 20,
         gap: 12,
+        alignItems: 'center', // Center cards vertically if needed
     },
     cardContainer: {
         width: CARD_WIDTH,
+        height: CARD_HEIGHT,
+        // Remove individual shadows if they cause issues, but keeping for depth
     },
     imageContainer: {
         width: "100%",
-        height: CARD_HEIGHT * 0.65,
+        height: "70%", // Give image more space
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
         overflow: "hidden",
@@ -171,93 +169,58 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     profileName: {
-        fontSize: 24,
-        fontWeight: "600",
+        fontSize: 32,
+        fontWeight: "900", // Max bold
         color: "#fff",
         fontFamily: "NunitoSans",
-        textShadowColor: "rgba(0, 0, 0, 0.5)",
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 4,
+        textShadowColor: "rgba(0, 0, 0, 0.75)", // Darker shadow
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 10, // Wider shadow
     },
     verifiedBadge: {
         backgroundColor: "#fff",
-        borderRadius: 10,
+        borderRadius: 14,
         padding: 2,
     },
     promptCard: {
         backgroundColor: "#fff",
         borderBottomLeftRadius: 16,
         borderBottomRightRadius: 16,
-        padding: 20,
+        padding: 24,
         paddingBottom: 24,
-        minHeight: CARD_HEIGHT * 0.35,
+        height: "30%", // Remaining height
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowRadius: 12,
+        elevation: 6,
         position: "relative",
+        justifyContent: 'center',
     },
     promptQuestion: {
-        fontSize: 13,
+        fontSize: 14,
         color: "#666",
         fontFamily: "NunitoSans",
-        marginBottom: 6,
+        marginBottom: 8,
+        fontWeight: '600'
     },
     promptAnswer: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: "700",
         color: "#000",
         fontFamily: "Tinos-Bold",
-        lineHeight: 28,
+        lineHeight: 32,
         paddingRight: 50,
     },
     roseButton: {
         position: "absolute",
-        bottom: 12,
-        right: 12,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        bottom: 24,
+        right: 24,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         backgroundColor: "#F5F0F7",
         justifyContent: "center",
         alignItems: "center",
-    },
-    upgradeCard: {
-        width: "100%",
-        height: CARD_HEIGHT,
-        backgroundColor: "#F8F8F8",
-        borderRadius: 16,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 24,
-    },
-    upgradeTitle: {
-        fontSize: 22,
-        fontWeight: "700",
-        color: "#000",
-        fontFamily: "Tinos-Bold",
-        marginTop: 16,
-        textAlign: "center",
-    },
-    upgradeSubtitle: {
-        fontSize: 14,
-        color: "#666",
-        fontFamily: "NunitoSans",
-        marginTop: 8,
-        textAlign: "center",
-    },
-    upgradeButton: {
-        marginTop: 24,
-        backgroundColor: "#8B5A9C",
-        paddingHorizontal: 32,
-        paddingVertical: 14,
-        borderRadius: 25,
-    },
-    upgradeButtonText: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#fff",
-        fontFamily: "NunitoSans",
     },
 });

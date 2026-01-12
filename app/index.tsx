@@ -110,7 +110,7 @@ export default function LoginScreen() {
             <SafeAreaView style={styles.content}>
                 {/* Logo Section - Centered */}
                 <View style={styles.logoSection}>
-                    <Text style={styles.appName}>Aligned</Text>
+                    <Text style={styles.appName}>Align</Text>
                     <Text style={styles.tagline}>Designed to find your match.</Text>
                 </View>
 
@@ -176,7 +176,7 @@ export default function LoginScreen() {
                                 onPress={handleGoogleSignIn}
                             >
                                 <Image
-                                    source={{ uri: "https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" }}
+                                    source={require("@/assets/icons/google.png")}
                                     style={styles.googleIcon}
                                 />
                                 <Text style={styles.googleButtonText}>Sign in with Google</Text>
@@ -185,7 +185,7 @@ export default function LoginScreen() {
                             {/* Sign in with Phone Number Button */}
                             <TouchableOpacity
                                 style={styles.phoneButton}
-                                onPress={handlePhoneSignIn}
+                                onPress={() => router.push("/auth/phone")}
                             >
                                 <Text style={styles.phoneButtonText}>Sign in with Phone Number</Text>
                             </TouchableOpacity>

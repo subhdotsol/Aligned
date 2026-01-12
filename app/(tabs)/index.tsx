@@ -20,11 +20,10 @@ export default function Index() {
   const currentProfile = profiles[currentIndex];
 
   const goToNextProfile = () => {
-    if (currentIndex < profiles.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      // Scroll to top for new profile
-      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
-    }
+    const nextIndex = (currentIndex + 1) % profiles.length;
+    setCurrentIndex(nextIndex);
+    // Scroll to top for new profile
+    scrollViewRef.current?.scrollTo({ y: 0, animated: false });
   };
 
   const handleLike = (id: string) => {
@@ -39,7 +38,6 @@ export default function Index() {
     goToNextProfile();
   };
 
-  const isFinished = currentIndex >= profiles.length;
 
   return (
     <View className="flex-1 bg-white">
@@ -63,53 +61,31 @@ export default function Index() {
         </View>
 
         {/* Profile Content */}
-        {!isFinished ? (
-          <>
-            <ScrollView
-              ref={scrollViewRef}
-              style={styles.scrollView}
-              contentContainerStyle={styles.scrollContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <ProfileCard
-                profile={currentProfile}
-                onLike={handleLike}
-                onPass={handlePass}
-              />
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <ProfileCard
+            profile={currentProfile}
+            onLike={handleLike}
+            onPass={handlePass}
+          />
 
-              {/* Bottom padding for tab bar */}
-              <View style={{ height: 120 }} />
-            </ScrollView>
+          {/* Bottom padding for tab bar */}
+          <View style={{ height: 120 }} />
+        </ScrollView>
 
-            {/* Static X button - fixed at bottom */}
-            <View style={styles.staticPassButtonContainer}>
-              <TouchableOpacity
-                style={styles.staticPassButton}
-                onPress={() => handlePass(currentProfile.id)}
-              >
-                <Ionicons name="close" size={28} color="#000" />
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="heart" size={64} color="#E5E5E5" />
-            <Text style={styles.emptyTitle}>You're all caught up!</Text>
-            <Text style={styles.emptySubtitle}>
-              Check back later for more profiles
-            </Text>
-            <TouchableOpacity
-              style={styles.resetButton}
-              onPress={() => {
-                setCurrentIndex(0);
-                setLikedProfiles([]);
-                setPassedProfiles([]);
-              }}
-            >
-              <Text style={styles.resetButtonText}>Start Over</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Static X button - fixed at bottom */}
+        <View style={styles.staticPassButtonContainer}>
+          <TouchableOpacity
+            style={styles.staticPassButton}
+            onPress={() => handlePass(currentProfile.id)}
+          >
+            <Ionicons name="close" size={28} color="#000" />
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     </View>
   );
