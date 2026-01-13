@@ -1,5 +1,5 @@
 use actix_web::{App, HttpResponse, HttpServer, Responder, web};
-use sqlx::PgPool;
+
 use dotenv::dotenv;
 mod config;
 mod db;

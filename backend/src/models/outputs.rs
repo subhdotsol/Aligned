@@ -11,6 +11,15 @@ pub struct MatchRow {
     pub last_message: Option<String>,
     pub last_message_at: Option<DateTime<Utc>>,
 }
+#[derive(Debug, sqlx::FromRow)]
+pub struct MessageRow {
+    pub id: Uuid,
+    pub match_id: Uuid,
+    pub sender_id: Uuid,
+    pub text: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub is_read: bool,
+}
 
 #[derive(Serialize)]
 pub struct StatusResponse {

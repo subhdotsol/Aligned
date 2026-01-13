@@ -1,7 +1,7 @@
 use crate::models::inputs::SendMessageRequest;
 use actix_web::{HttpResponse, Responder, web};
 use crate::db::DbState;
-use crate::models::outputs::{StatusResponse, MatchRow, MatchSummary, UserSummary, MessagePreview} ;  
+use crate::models::outputs::{StatusResponse, MatchRow, MatchSummary, UserSummary, MessagePreview, MessageRow, MessageHistoryResponse,Message} ;  
 use sqlx::types::Uuid;   
 
 pub async fn get_matches(
@@ -64,10 +64,57 @@ pub async fn get_matches(
     }
 }
 
-pub async fn get_messages(path: web::Path<String>) -> impl Responder {
-    let match_id = path.into_inner();
-    println!("Messages: Get history for match {}", match_id);
-    HttpResponse::Ok().body(format!("Messages: Get Chat History for {}", match_id))
+pub async fn get_messages( db: web::Data<DbState>,path: web::Path<String>) -> impl Responder {
+    let match_id_str = path.into_inner();
+
+let match_id_uuid = match Uuid::parse_str(&match_id_str) {
+    Ok(uuid) => uuid,
+    Err(e) => {
+        eprintln!("Invalid UUID: {}", e);
+        return HttpResponse::BadRequest().json(StatusResponse {
+            status: "error".to_string(),
+            message: Some("Invalid match ID".to_string()),
+        });
+    }
+};
+    let result = sqlx::query_as::<_, MessageRow>(
+        "SELECT id, match_id, sender_id, text, created_at, is_read
+         FROM messages 
+         WHERE match_id = $1
+         ORDER BY created_at ASC"
+    )
+    .bind(match_id_uuid)
+    .fetch_all(&db.db)
+    .await; 
+
+    match result {
+        Ok(db_messages) => {
+             let messages: Vec<Message> = db_messages
+                .into_iter()
+                .map(|row| Message {
+                    id: row.id.to_string(),
+                    sender_id: row.sender_id.to_string(),
+                    text: row.text,
+                    created_at: row.created_at
+                        .map(|dt| dt.to_rfc3339())
+                        .unwrap_or_else(|| "".to_string()),
+                })
+                .collect();
+            
+            println!("✓ Fetched {} messages for match {}", messages.len(), match_id_uuid);
+            
+            HttpResponse::Ok().json(MessageHistoryResponse { messages })
+        },
+        Err(e) => {
+            eprintln!("Error fetching messages: {:?}", e);
+            HttpResponse::InternalServerError().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some("Failed to fetch messages".to_string()),
+            })
+        }
+    }   
+
+
 }
 
 pub async fn send_message(
