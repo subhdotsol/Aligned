@@ -1,6 +1,26 @@
 use serde::Serialize;
+use uuid::Uuid;
+use chrono::{DateTime, Utc};
 
-// Generic Responses
+#[derive(Debug, sqlx::FromRow, Serialize)]
+pub struct MatchRow {
+    pub id: Uuid,
+    pub user1_id: Option<Uuid>,
+    pub user2_id: Option<Uuid>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub last_message: Option<String>,
+    pub last_message_at: Option<DateTime<Utc>>,
+}
+#[derive(Debug, sqlx::FromRow)]
+pub struct MessageRow {
+    pub id: Uuid,
+    pub match_id: Uuid,
+    pub sender_id: Uuid,
+    pub text: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub is_read: bool,
+}
+
 #[derive(Serialize)]
 pub struct StatusResponse {
     pub status: String,
@@ -79,7 +99,7 @@ pub struct FeedResponse {
 }
 
 // Interactions
-#[derive(Serialize)]
+#[derive(Serialize, sqlx::FromRow )]
 pub struct MatchResponse {
     pub status: String, // "MATCH" or "SENT"
     pub match_id: Option<String>,

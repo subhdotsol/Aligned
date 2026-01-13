@@ -1,1 +1,4 @@
 target
+.env
+*.db
+uploads/
