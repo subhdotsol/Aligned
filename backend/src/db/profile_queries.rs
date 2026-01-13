@@ -104,3 +104,19 @@ pub async fn upsert_profile(pool: &PgPool, user_id: &Uuid, req: &UpdateProfileRe
     }
 }
 
+/// Delete user account (profile + user)
+pub async fn delete_user(pool: &PgPool, user_id: &Uuid) -> Result<(), sqlx::Error> {
+    // Delete profile first (foreign key constraint)
+    sqlx::query("DELETE FROM profiles WHERE user_id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
+    // Delete user
+    sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}

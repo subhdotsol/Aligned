@@ -67,6 +67,45 @@ pub async fn finalize_profile() -> impl Responder {
     HttpResponse::Ok().body("Profile: Finalize (Go Live)")
 }
 
-pub async fn delete_account() -> impl Responder {
-    HttpResponse::Ok().body("Profile: Delete Account")
+pub async fn delete_account(
+    req: HttpRequest,
+    pool: web::Data<PgPool>,
+) -> impl Responder {
+    // Get user ID from claims
+    let claims = match req.extensions().get::<Claims>().cloned() {
+        Some(c) => c,
+        None => {
+            return HttpResponse::Unauthorized().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some("No authentication claims found".to_string()),
+            });
+        }
+    };
+
+    let user_id = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some("Invalid user ID format".to_string()),
+            });
+        }
+    };
+
+    // Delete user and profile
+    match profile_queries::delete_user(&pool, &user_id).await {
+        Ok(_) => {
+            HttpResponse::Ok().json(StatusResponse {
+                status: "success".to_string(),
+                message: Some("Account deleted successfully".to_string()),
+            })
+        }
+        Err(e) => {
+            println!("Failed to delete account: {:?}", e);
+            HttpResponse::InternalServerError().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some("Database error".to_string()),
+            })
+        }
+    }
 }
