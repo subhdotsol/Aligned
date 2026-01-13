@@ -1,13 +1,14 @@
-use crate::models::inputs::SendMessageRequest;
+use crate::models::inputs::{SendMessageRequest,MessageQuery};
 use actix_web::{HttpResponse, Responder, web};
 use crate::db::DbState;
 use crate::models::outputs::{StatusResponse, MatchRow, MatchSummary, UserSummary, MessagePreview, MessageRow, MessageHistoryResponse,Message} ;  
 use sqlx::types::Uuid;   
+use chrono::{DateTime, Utc};
 
 pub async fn get_matches(
     db: web::Data<DbState>,
 ) -> impl Responder {
-    let current_user_id = Uuid::parse_str("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+    let current_user_id = Uuid::parse_str("b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22")
         .expect("Invalid UUID");
     
     let result = sqlx::query_as::<_, MatchRow>(
@@ -64,32 +65,117 @@ pub async fn get_matches(
     }
 }
 
-pub async fn get_messages( db: web::Data<DbState>,path: web::Path<String>) -> impl Responder {
-    let match_id_str = path.into_inner();
 
-let match_id_uuid = match Uuid::parse_str(&match_id_str) {
-    Ok(uuid) => uuid,
-    Err(e) => {
-        eprintln!("Invalid UUID: {}", e);
-        return HttpResponse::BadRequest().json(StatusResponse {
-            status: "error".to_string(),
-            message: Some("Invalid match ID".to_string()),
-        });
-    }
-};
-    let result = sqlx::query_as::<_, MessageRow>(
-        "SELECT id, match_id, sender_id, text, created_at, is_read
-         FROM messages 
-         WHERE match_id = $1
-         ORDER BY created_at ASC"
+pub async fn get_messages(
+    db: web::Data<DbState>,
+    path: web::Path<String>,
+    query: web::Query<MessageQuery>, 
+) -> impl Responder {
+ 
+    let match_id_str = path.into_inner();
+    let match_id = match Uuid::parse_str(&match_id_str) {
+        Ok(id) => id,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some("Invalid match ID format".to_string()),
+            });
+        }
+    };
+
+    
+    let current_user_id = Uuid::parse_str("a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11")
+        .expect("Invalid hardcoded UUID");
+
+    
+    let match_check = sqlx::query_as::<_, MatchRow>(
+        "SELECT id, user1_id, user2_id, created_at, last_message, last_message_at
+         FROM matches 
+         WHERE id = $1 AND (user1_id = $2 OR user2_id = $2)"
     )
-    .bind(match_id_uuid)
-    .fetch_all(&db.db)
-    .await; 
+    .bind(match_id)
+    .bind(current_user_id)
+    .fetch_optional(&db.db)
+    .await;
+
+    // match match_check {
+    //     Ok(Some(_)) => {
+               // match_row is MatchRow {
+    //     id: Uuid,
+    //     user1_id: Some(Uuid),
+    //     user2_id: Some(Uuid),
+    //     created_at: Some(DateTime<Utc>),
+    //     last_message: Some(String),
+    //     last_message_at: Some(DateTime<Utc>),
+    // }
+    
+    // println!("User is part of match: {:?}", match_row.id); 
+    //     }
+    //     Ok(None) => {
+    //         return HttpResponse::Forbidden().json(StatusResponse {
+    //             status: "error".to_string(),
+    //             message: Some("You don't have access to this match".to_string()),
+    //         });
+    //     }
+    //     Err(e) => {
+    //         eprintln!("✗ Database error checking match access: {:?}", e);
+    //         return HttpResponse::InternalServerError().json(StatusResponse {
+    //             status: "error".to_string(),
+    //             message: Some("Failed to verify match access".to_string()),
+    //         });
+    //     }
+    // }
+
+    // Step 4: Parse cursor (if provided)
+    let cursor_time: Option<DateTime<Utc>> = match &query.cursor {
+        Some(cursor_str) => {
+            match DateTime::parse_from_rfc3339(cursor_str) {
+                Ok(dt) => Some(dt.with_timezone(&Utc)),
+                Err(_) => {
+                    return HttpResponse::BadRequest().json(StatusResponse {
+                        status: "error".to_string(),
+                        message: Some("Invalid cursor format. Use ISO 8601 timestamp".to_string()),
+                    });
+                }
+            }
+        }
+        None => None,
+    };
+
+    
+    let limit = query.limit.unwrap_or(50).min(100);
+
+    
+    let result = if let Some(cursor) = cursor_time {
+        sqlx::query_as::<_, MessageRow>(
+            "SELECT id, match_id, sender_id, text, created_at, is_read
+             FROM messages 
+             WHERE match_id = $1 AND created_at > $2
+             ORDER BY created_at ASC
+             LIMIT $3"
+        )
+        .bind(match_id)
+        .bind(cursor)
+        .bind(limit)
+        .fetch_all(&db.db)
+        .await
+    } else {
+        sqlx::query_as::<_, MessageRow>(
+            "SELECT id, match_id, sender_id, text, created_at, is_read
+             FROM messages 
+             WHERE match_id = $1
+             ORDER BY created_at ASC
+             LIMIT $2"
+        )
+        .bind(match_id)
+        .bind(limit)
+        .fetch_all(&db.db)
+        .await
+    };
 
     match result {
         Ok(db_messages) => {
-             let messages: Vec<Message> = db_messages
+            let messages: Vec<Message> = db_messages
                 .into_iter()
                 .map(|row| Message {
                     id: row.id.to_string(),
@@ -100,21 +186,20 @@ let match_id_uuid = match Uuid::parse_str(&match_id_str) {
                         .unwrap_or_else(|| "".to_string()),
                 })
                 .collect();
-            
-            println!("✓ Fetched {} messages for match {}", messages.len(), match_id_uuid);
-            
+
+            println!("✓ Fetched {} messages for match {} (cursor: {:?})", 
+                     messages.len(), match_id, cursor_time);
+
             HttpResponse::Ok().json(MessageHistoryResponse { messages })
-        },
+        }
         Err(e) => {
-            eprintln!("Error fetching messages: {:?}", e);
+            eprintln!("✗ Database error fetching messages: {:?}", e);
             HttpResponse::InternalServerError().json(StatusResponse {
                 status: "error".to_string(),
                 message: Some("Failed to fetch messages".to_string()),
             })
         }
-    }   
-
-
+    }
 }
 
 pub async fn send_message(

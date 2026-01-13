@@ -38,3 +38,9 @@ pub struct InteractContext {
 pub struct SendMessageRequest {
     pub text: String,
 }
+
+#[derive(Deserialize)]
+pub struct MessageQuery {
+    pub cursor: Option<String>, 
+    pub limit: Option<i64>,
+}
