@@ -1,8 +1,13 @@
 use actix_web::{App, HttpResponse, HttpServer, Responder, web};
 
+use dotenv::dotenv;
+mod config;
+mod db;
 mod models;
 mod routes;
 
+use config::Config;
+use db::DbState;
 use routes::{auth, feed, interactions, matches, profile};
 
 async fn health_check() -> impl Responder {
@@ -11,9 +16,26 @@ async fn health_check() -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    println!("Starting server on 127.0.0.1:8080");
-    HttpServer::new(|| {
+    dotenv().ok();
+    
+
+    let config = Config::from_env();
+    
+    // Create database connection pool
+    let pool = db::create_pool()
+        .await
+        .expect("Failed to create database pool");
+   
+    let db_state = web::Data::new(DbState { db: pool.clone() }); 
+        
+    println!("Database connected!");
+    println!("Starting server on {}:{}", config.host, config.port);
+    
+    let server_address = format!("{}:{}", config.host, config.port);
+    
+    HttpServer::new(move || {
         App::new()
+            .app_data(db_state.clone())
             .route("/health", web::get().to(health_check))
             // Auth
             .route("/auth/phone/login", web::post().to(auth::phone_login))
@@ -45,7 +67,7 @@ async fn main() -> std::io::Result<()> {
                 web::post().to(matches::send_message),
             )
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(&server_address)?
     .run()
     .await
 }
