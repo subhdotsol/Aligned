@@ -5,6 +5,8 @@ use serde::Serialize;
 pub struct StatusResponse {
     pub status: String,
     pub message: Option<String>,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    // pub pending_actions: Option<Vec<String>>,
 }
 
 // Auth
@@ -68,8 +70,10 @@ pub struct ImageUploadResponse {
 
 #[derive(Serialize)]
 pub struct FinalizeProfileResponse {
-    pub success: bool,
-    pub is_profile_complete: bool,
+    pub status: String,
+    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pending_actions: Option<Vec<String>>,
 }
 
 // Feed

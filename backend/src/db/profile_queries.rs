@@ -120,3 +120,33 @@ pub async fn delete_user(pool: &PgPool, user_id: &Uuid) -> Result<(), sqlx::Erro
 
     Ok(())
 }
+
+/// Count how many profile attributes are still NULL (unfilled)
+pub async fn check_profile_attributes_filled(pool: &PgPool, user_id: &Uuid) -> Result<i64, sqlx::Error> {
+    let row: (i64,) = sqlx::query_as(r#"
+        SELECT 
+            (CASE WHEN name IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN bio IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN pronouns IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN gender IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN sexuality IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN height IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN job IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN company IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN school IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN ethnicity IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN politics IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN religion IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN relationship_type IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN dating_intention IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN drinks IS NULL THEN 1 ELSE 0 END +
+             CASE WHEN smokes IS NULL THEN 1 ELSE 0 END)::bigint AS missing_count
+        FROM profiles
+        WHERE user_id = $1
+    "#)
+    .bind(user_id)
+    .fetch_one(pool)
+    .await?;
+
+    Ok(row.0)
+}

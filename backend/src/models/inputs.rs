@@ -18,6 +18,11 @@ pub struct UpdateUserRequest {
 }   
 
 #[derive(Deserialize)]
+pub struct UploadProfileImageRequest {
+    pub image_url: String,
+}
+
+#[derive(Deserialize)]
 pub struct UpdateProfileRequest {
     // For profiles table
     pub name: Option<String>,

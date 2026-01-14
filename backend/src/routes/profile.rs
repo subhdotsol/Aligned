@@ -2,10 +2,10 @@ use actix_web::{HttpRequest, HttpResponse, HttpMessage, Responder, web};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::inputs::UpdateProfileRequest;
+use crate::models::inputs::{UpdateProfileRequest, UploadProfileImageRequest };
 use crate::jwtauth::Claims;
-use crate::models::outputs::StatusResponse;
-use crate::db::profile_queries;
+use crate::models::outputs::{StatusResponse, FinalizeProfileResponse};
+use crate::db::{profile_queries, prompt_queries, images_queries};
 
 pub async fn get_profile() -> impl Responder {
     HttpResponse::Ok().body("Profile: Get Current Profile")
@@ -58,13 +58,123 @@ pub async fn update_profile(
     }
 }
 
-pub async fn upload_profile_images() -> impl Responder {
+pub async fn upload_profile_images(pool: web::Data<PgPool>, req: HttpRequest, body: web::Json<UploadProfileImageRequest>) -> impl Responder {
     // Multipart handling would go here
-    HttpResponse::Ok().body("Profile: Upload Images")
+
+    let Some(claims) = req.extensions().get::<Claims>().cloned() else {
+        return HttpResponse::Unauthorized().json(StatusResponse {
+            status: "error".to_string(),
+            message: Some("No authentication claims found".to_string()),
+        })
+    };
+
+    let user_id: Uuid = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some("Invalid user ID format".to_string()),
+            })
+        }
+    };
+
+    match images_queries::upload_profile_images(&pool, &user_id, &body.image_url).await {
+        Ok(_) => HttpResponse::Ok().json(StatusResponse {
+            status: "success".to_string(),
+            message: Some("Profile images uploaded successfully".to_string()),
+        }),
+        Err(e) => {
+            println!("Failed to upload profile images: {:?}", e);
+            HttpResponse::InternalServerError().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some(e.to_string()),
+            })
+        }
+    }
 }
 
-pub async fn finalize_profile() -> impl Responder {
-    HttpResponse::Ok().body("Profile: Finalize (Go Live)")
+pub async fn finalize_profile(req: HttpRequest, pool: web::Data<PgPool>) -> impl Responder {
+
+    let Some(claims) = req.extensions().get::<Claims>().cloned() else {
+        return HttpResponse::Unauthorized().json(FinalizeProfileResponse {
+            status: "error".to_string(),
+            message: Some("No authentication claims found".to_string()),
+            pending_actions: Some(vec!["No authentication claims found".to_string()]),
+        })
+    };
+
+    let user_id: Uuid = match Uuid::parse_str(&claims.sub) {
+        Ok(id) => id,
+        Err(_) => {
+            return HttpResponse::BadRequest().json(FinalizeProfileResponse {
+                status: "error".to_string(),
+                message: Some("Invalid user ID format".to_string()),
+                pending_actions: Some(vec!["Invalid user ID format".to_string()])
+            })
+        }
+    };
+
+    let mut pending: Vec<String> = Vec::new();
+
+    // CHECK: all the 6 photos uploaded
+    let images_uploaded = match images_queries::count_images(&pool, &user_id).await {
+        Ok(count) => count,
+        Err(e) => {
+            println!("Failed to count images: {:?}", e);
+            return HttpResponse::InternalServerError().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some(e.to_string()),
+            });
+        }
+    };
+
+    if images_uploaded < 6 {
+        pending.push(format!("Upload {} more images", 6 - images_uploaded));
+    }
+
+    // CHECK: all the 3 prompts uploaded
+    let prompts_uploaded = match prompt_queries::count_prompts(&pool, &user_id).await {
+        Ok(count) => count,
+        Err(e) => {
+            println!("Failed to count prompts: {:?}", e);
+            return HttpResponse::InternalServerError().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some(e.to_string()),
+            });
+        }
+    };
+    if prompts_uploaded < 3 {
+        pending.push(format!("Upload {} more prompts", 3 - prompts_uploaded));
+    }
+
+    // CHECK: all profile details filled
+    let missing_fields = match profile_queries::check_profile_attributes_filled(&pool, &user_id).await {
+        Ok(count) => count,
+        Err(e) => {
+            println!("Failed to check profile attributes: {:?}", e);
+            return HttpResponse::InternalServerError().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some(e.to_string()),
+            });
+        }
+    };
+    if missing_fields > 0 {
+        pending.push(format!("Fill {} more profile details", missing_fields));
+    }
+
+    if pending.is_empty() {
+        HttpResponse::Ok().json(FinalizeProfileResponse {
+            status: "success".to_string(),
+            message: Some("Profile finalized successfully".to_string()),
+            pending_actions: Some(pending),
+        })
+    } else {
+        HttpResponse::BadRequest().json(FinalizeProfileResponse {
+            status: "error".to_string(),
+            message: Some("Profile not finalized".to_string()),
+            pending_actions: Some(pending),
+        })
+    }
 }
 
 pub async fn delete_account(
