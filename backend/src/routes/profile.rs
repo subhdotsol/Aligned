@@ -2,7 +2,7 @@ use actix_web::{HttpRequest, HttpResponse, HttpMessage, Responder, web};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::outputs::{UserProfile, UserImage, UserPrompt, ProfileDetails};
+use crate::models::outputs::{UserProfile, UserImage, UserPrompt};
 use crate::models::inputs::{UpdateProfileRequest, UploadProfileImageRequest };
 use crate::jwtauth::Claims;
 use crate::models::outputs::{StatusResponse, FinalizeProfileResponse};
@@ -251,7 +251,7 @@ pub async fn delete_account(
         }
     };
 
-    // Delete user and profile
+    // Delete user and profile and images and prompts
     match profile_queries::delete_user(&pool, &user_id).await {
         Ok(_) => {
             HttpResponse::Ok().json(StatusResponse {

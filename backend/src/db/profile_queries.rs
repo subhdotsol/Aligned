@@ -113,6 +113,18 @@ pub async fn delete_user(pool: &PgPool, user_id: &Uuid) -> Result<(), sqlx::Erro
         .execute(pool)
         .await?;
 
+    // Delete the user's images
+    sqlx::query("DELETE FROM user_images WHERE user_id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
+    // Delete the user's prompts
+    sqlx::query("DELETE FROM user_prompts WHERE user_id = $1")
+        .bind(user_id)
+        .execute(pool)
+        .await?;
+
     // Delete user
     sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(user_id)
