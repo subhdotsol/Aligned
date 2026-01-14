@@ -55,3 +55,15 @@ pub async fn get_user_images(pool: &PgPool, user_id: &Uuid) -> Result<Vec<(Uuid,
 
     Ok(rows)
 }
+
+///
+pub async fn get_images(pool: &PgPool, user_id: &Uuid) -> Result<Vec<(Uuid, String, i32)>, sqlx::Error> {
+    let rows: Vec<(Uuid, String, i32)> = sqlx::query_as(
+        "SELECT id, url, display_order FROM user_images WHERE user_id = $1 ORDER BY display_order"
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await?;
+
+    Ok(rows)
+}

@@ -52,3 +52,11 @@ pub async fn update_user_email(pool: &PgPool, user_id: &Uuid, email: &str) -> Re
 
     Ok(())
 }
+
+pub async fn get_user(pool: &PgPool, user_id: &Uuid) -> Result<(), sqlx::Error> {
+    let row = sqlx::query_as(r#"
+    SELECT * FROM users WHERE id = $1 
+    "#).bind(user_id).fetch_one(pool).await?;
+
+    Ok(row)
+}

@@ -1,6 +1,7 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 use crate::models::inputs::UpdateProfileRequest;
+use crate::models::outputs::ProfileDetails;
 
 /// Check if a profile exists for a user
 pub async fn check_profile_exists(pool: &PgPool, user_id: &Uuid) -> Result<bool, sqlx::Error> {
@@ -149,4 +150,15 @@ pub async fn check_profile_attributes_filled(pool: &PgPool, user_id: &Uuid) -> R
     .await?;
 
     Ok(row.0)
+}
+
+pub async fn get_profile(pool: &PgPool, user_id: &Uuid) -> Result<ProfileDetails, sqlx::Error> {
+    let row = sqlx::query_as::<_, ProfileDetails>(r#"
+        SELECT name, bio, birthdate::TEXT, pronouns, gender, sexuality, height,
+            NULL as location, job, company, school, ethnicity, politics, religion,
+            relationship_type, dating_intention, drinks, smokes
+        FROM profiles WHERE user_id = $1
+    "#).bind(user_id).fetch_one(pool).await?;
+
+    Ok(row)
 }

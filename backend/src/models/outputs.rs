@@ -33,10 +33,9 @@ pub struct UserSummary {
 #[derive(Serialize)]
 pub struct UserProfile {
     pub id: String,
-    pub name: String,
-    pub images: Vec<UserImage>,
-    pub prompts: Vec<UserPrompt>,
-    pub details: ProfileDetails,
+    pub images: Option<Vec<UserImage>>,
+    pub prompts: Option<Vec<UserPrompt>>,
+    pub details: Option<ProfileDetails>,
 }
 
 #[derive(Serialize)]
@@ -54,11 +53,26 @@ pub struct UserPrompt {
     pub order: i32,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, sqlx::FromRow)]
 pub struct ProfileDetails {
-    pub height: Option<i32>,
+    pub name: Option<String>,
+    pub bio: Option<String>,
+    pub birthdate: Option<String>,      // DATE - "1995-03-15"
+    pub pronouns: Option<String>,        // "she/her", "he/him"
+    pub gender: Option<String>,          // "Woman", "Man", "Non-binary"
+    pub sexuality: Option<String>,       // "Straight", "Gay", "Bisexual"
+    pub height: Option<i32>,             // in cm
+    pub location: Option<String>,        // Will need to convert to POINT
     pub job: Option<String>,
-    // Add other fields
+    pub company: Option<String>,
+    pub school: Option<String>,
+    pub ethnicity: Option<String>,
+    pub politics: Option<String>,
+    pub religion: Option<String>,
+    pub relationship_type: Option<String>,  // "Monogamy"
+    pub dating_intention: Option<String>,   // "Long-term relationship"
+    pub drinks: Option<String>,             // "Socially", "No"
+    pub smokes: Option<String>,   
 }
 
 #[derive(Serialize)]

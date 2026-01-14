@@ -2,13 +2,62 @@ use actix_web::{HttpRequest, HttpResponse, HttpMessage, Responder, web};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::models::outputs::{UserProfile, UserImage, UserPrompt, ProfileDetails};
 use crate::models::inputs::{UpdateProfileRequest, UploadProfileImageRequest };
 use crate::jwtauth::Claims;
 use crate::models::outputs::{StatusResponse, FinalizeProfileResponse};
 use crate::db::{profile_queries, prompt_queries, images_queries};
 
-pub async fn get_profile() -> impl Responder {
-    HttpResponse::Ok().body("Profile: Get Current Profile")
+pub async fn get_profile(pool: web::Data<PgPool>, req: HttpRequest) -> impl Responder {
+    let Some(claims) = req.extensions().get::<Claims>().cloned() else {
+        return HttpResponse::Unauthorized().json(StatusResponse {
+            status: "error".to_string(),
+            message: Some("No authentication claims found".to_string()),
+        });
+    };
+
+    let Ok(user_id) = Uuid::parse_str(&claims.sub) else {
+        return HttpResponse::BadRequest().json(StatusResponse {
+            status: "error".to_string(),
+            message: Some("Invalid user ID format".to_string()),
+        });
+    };
+
+    // Get profile details (returns None if not found)
+    let profile_details = match profile_queries::get_profile(&pool, &user_id).await {
+        Ok(p) => Some(p),
+        Err(_) => None,
+    };
+
+    // Get images and map tuples to UserImage structs
+    let user_images = match images_queries::get_images(&pool, &user_id).await {
+        Ok(rows) => Some(rows.into_iter().map(|(id, url, order)| UserImage {
+            id: id.to_string(),
+            url,
+            order,
+        }).collect()),
+        Err(_) => None,
+    };
+
+    // Get prompts and map to UserPrompt structs
+    let user_prompts = match prompt_queries::get_user_prompts(&pool, &user_id).await {
+        Ok(rows) => Some(rows.into_iter().map(|(id, question, answer, order)| UserPrompt {
+            id: id.to_string(),
+            question,
+            answer,
+            order,
+        }).collect()),
+        Err(_) => None,
+    };
+
+    let user_profile = UserProfile {
+        id: user_id.to_string(),
+        images: user_images,
+        prompts: user_prompts,
+        details: profile_details,
+    };
+
+    HttpResponse::Ok().json(user_profile)
 }
 
 pub async fn update_profile(
