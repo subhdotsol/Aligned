@@ -1,6 +1,10 @@
 use actix_web::{HttpRequest, HttpResponse, HttpMessage, Responder, web};
+use actix_multipart::form::{MultipartForm, json::Json as MpJson, tempfile::TempFile};
+use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
+use std::fs;
+use std::path::Path;
 
 use crate::models::outputs::{UserProfile, UserImage, UserPrompt};
 use crate::models::inputs::{UpdateProfileRequest, UploadProfileImageRequest };
@@ -264,6 +268,56 @@ pub async fn delete_account(
             HttpResponse::InternalServerError().json(StatusResponse {
                 status: "error".to_string(),
                 message: Some("Database error".to_string()),
+            })
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+struct Metadata {
+    name: String,
+}
+
+#[derive(Debug, MultipartForm)]
+pub struct ImageUpload {
+    #[multipart(limit = "50mb")]
+    file: TempFile,
+    metadata: MpJson<Metadata>,
+}
+
+pub async fn upload_user_images(pool: web::Data<PgPool>, req: HttpRequest, MultipartForm(form): MultipartForm<ImageUpload>) -> impl Responder {
+    let Some(claims) = req.extensions().get::<Claims>().cloned() else {
+        return HttpResponse::Unauthorized().json(StatusResponse {
+            status: "error".to_string(),
+            message: Some("No authentication claims found".to_string()),
+        });
+    };
+
+    let Ok(user_id) = Uuid::parse_str(&claims.sub) else {
+        return HttpResponse::BadRequest().json(StatusResponse {
+            status: "error".to_string(),
+            message: Some("Invalid user ID format".to_string()),
+        });
+    };
+
+    let file_name = form.file.file_name.as_ref().map(|s| s.as_str()).unwrap_or("uploaded_file");
+    let dest_path = Path::new("./uploads/").join(file_name);
+
+    println!("Path : {:?}", dest_path);
+
+    match fs::copy(&form.file.file.path(), &dest_path) {
+        Ok(_) => {
+            println!("File Uploaded!!!!");
+            HttpResponse::Ok().json(StatusResponse {
+                status: "success".to_string(),
+                message: Some("File uploaded successfully".to_string()),
+            })
+        },
+        Err(e) => {
+            println!("Failed to upload file: {:?}", e);
+            HttpResponse::InternalServerError().json(StatusResponse {
+                status: "error".to_string(),
+                message: Some("Failed to upload file".to_string()),
             })
         }
     }
