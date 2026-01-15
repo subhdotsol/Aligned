@@ -15,7 +15,7 @@ mod routes;
 mod jwtauth;
 mod db;
 
-use routes::{auth, feed, interactions, matches, profile};
+use routes::{auth, feed, interactions, matches, profile, prompts};
 
 async fn health_check() -> impl Responder {
     HttpResponse::Ok().body("I'm ok")
@@ -63,6 +63,11 @@ async fn main() -> std::io::Result<()> {
                     .route("/matches", web::get().to(matches::get_matches))
                     .route("/matches/{id}/messages", web::get().to(matches::get_messages))
                     .route("/matches/{id}/messages", web::post().to(matches::send_message))
+                    // Prompts routes
+                    .route("/prompts", web::get().to(prompts::get_prompts))
+                    .route("/prompts", web::post().to(prompts::create_prompt))
+                    .route("/prompts/{order}", web::put().to(prompts::update_prompt))
+                    .route("/prompts/{order}", web::delete().to(prompts::delete_prompt))
             )
     })
     .bind(("127.0.0.1", 8080))?

@@ -63,3 +63,15 @@ pub struct InteractContext {
 pub struct SendMessageRequest {
     pub text: String,
 }
+
+#[derive(Deserialize)]
+pub struct CreatePromptRequest {
+    pub question: String,
+    pub answer: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdatePromptRequest {
+    pub question: String,
+    pub answer: String,
+}
