@@ -174,3 +174,44 @@ pub async fn get_profile(pool: &PgPool, user_id: &Uuid) -> Result<ProfileDetails
 
     Ok(row)
 }
+
+/// Get profile suggestions based on user preferences
+/// For now: filters by gender_preference only, excludes current user
+pub async fn get_suggestions(
+    pool: &PgPool,
+    gender_preference: Option<Vec<String>>,
+    user_id: &Uuid,
+) -> Result<Vec<ProfileDetails>, sqlx::Error> {
+    
+    // If gender_preference is provided, filter by it; otherwise return all profiles
+    let profiles = if let Some(genders) = gender_preference {
+        // Filter profiles where gender is in the preference list
+        sqlx::query_as::<_, ProfileDetails>(r#"
+            SELECT name, bio, birthdate::TEXT, pronouns, gender, sexuality, height,
+                NULL as location, job, company, school, ethnicity, politics, religion,
+                relationship_type, dating_intention, drinks, smokes
+            FROM profiles 
+            WHERE gender = ANY($1) AND user_id != $2
+            LIMIT 20
+        "#)
+        .bind(&genders)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?
+    } else {
+        // No preference - return all profiles except current user
+        sqlx::query_as::<_, ProfileDetails>(r#"
+            SELECT name, bio, birthdate::TEXT, pronouns, gender, sexuality, height,
+                NULL as location, job, company, school, ethnicity, politics, religion,
+                relationship_type, dating_intention, drinks, smokes
+            FROM profiles 
+            WHERE user_id != $1
+            LIMIT 20
+        "#)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await?
+    };
+
+    Ok(profiles)
+}

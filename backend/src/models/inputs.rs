@@ -75,3 +75,21 @@ pub struct UpdatePromptRequest {
     pub question: String,
     pub answer: String,
 }
+
+// USERS PREFERENCES
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AgeRange {
+    pub min: i32,
+    pub max: i32,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct Preferences {
+    pub age_range: Option<AgeRange>,
+    pub distance_max: Option<i32>,
+    pub gender_preference: Option<Vec<String>>,
+    pub ethnicity_preference: Option<Vec<String>>,
+    pub religion_preference: Option<Vec<String>>,
+}

@@ -53,7 +53,7 @@ pub struct UserPrompt {
     pub order: i32,
 }
 
-#[derive(Serialize, sqlx::FromRow)]
+#[derive(Serialize, Debug, sqlx::FromRow)]
 pub struct ProfileDetails {
     pub name: Option<String>,
     pub bio: Option<String>,

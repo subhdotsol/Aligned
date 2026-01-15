@@ -60,3 +60,28 @@ pub async fn get_user(pool: &PgPool, user_id: &Uuid) -> Result<(), sqlx::Error> 
 
     Ok(row)
 }
+
+/// Get user preferences as JSON
+pub async fn get_user_preferences(pool: &PgPool, user_id: &Uuid) -> Result<Option<serde_json::Value>, sqlx::Error> {
+    let row: Option<(serde_json::Value,)> = sqlx::query_as(
+        "SELECT preferences FROM users WHERE id = $1"
+    )
+    .bind(user_id)
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(row.map(|r| r.0))
+}
+
+/// Update user preferences
+pub async fn update_user_preferences(pool: &PgPool, user_id: &Uuid, preferences: serde_json::Value) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE users SET preferences = $2 WHERE id = $1"
+    )
+    .bind(user_id)
+    .bind(preferences)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
