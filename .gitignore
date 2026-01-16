@@ -44,3 +44,6 @@ app-example
 /ios
 /android
 /backend/target
+
+# Auth
+google-services.json

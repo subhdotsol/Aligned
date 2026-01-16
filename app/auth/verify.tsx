@@ -2,6 +2,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+    ActivityIndicator,
+    Alert,
     KeyboardAvoidingView,
     Platform,
     StyleSheet,
@@ -11,25 +13,83 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { phoneConfirmation, submittedPhoneNumber } from "./phone";
 
 export default function VerificationScreen() {
     const router = useRouter();
     const [code, setCode] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleNext = () => {
-        router.push("/auth/interstitial");
+    console.log('[VERIFY] Screen mounted');
+    console.log('[VERIFY] phoneConfirmation exists:', !!phoneConfirmation);
+    console.log('[VERIFY] submittedPhoneNumber:', submittedPhoneNumber);
+
+    const verifyOtp = async (otpCode: string) => {
+        console.log('[VERIFY] verifyOtp called with code:', otpCode);
+
+        if (!phoneConfirmation) {
+            console.log('[VERIFY] ERROR: No phoneConfirmation object!');
+            Alert.alert("Error", "No verification session found. Please go back and try again.");
+            return;
+        }
+
+        console.log('[VERIFY] phoneConfirmation.verificationId:', phoneConfirmation.verificationId);
+        console.log('[VERIFY] Starting verification...');
+
+        setIsLoading(true);
+        try {
+            console.log('[VERIFY] Calling phoneConfirmation.confirm()...');
+            const userCredential = await phoneConfirmation.confirm(otpCode);
+
+            console.log('[VERIFY] SUCCESS: OTP verified!');
+            console.log('[VERIFY] User UID:', userCredential?.user?.uid);
+            console.log('[VERIFY] User phone:', userCredential?.user?.phoneNumber);
+            console.log('[VERIFY] Navigating to interstitial...');
+
+            // OTP verified successfully - navigate to next screen
+            router.push("/auth/interstitial");
+        } catch (error: any) {
+            console.log('[VERIFY] ERROR verifying OTP:');
+            console.log('[VERIFY] Error code:', error.code);
+            console.log('[VERIFY] Error message:', error.message);
+            console.log('[VERIFY] Full error:', JSON.stringify(error, null, 2));
+            Alert.alert(
+                "Verification Failed",
+                error.message || "Invalid code. Please try again."
+            );
+        } finally {
+            console.log('[VERIFY] verifyOtp completed, setting loading to false');
+            setIsLoading(false);
+        }
     };
 
     // Auto-advance if 6 digits
     const handleTextChange = (text: string) => {
+        console.log('[VERIFY] Code input changed:', text, 'length:', text.length);
         setCode(text);
         if (text.length === 6) {
-            // Simulate slight delay/check
-            setTimeout(() => {
-                router.push("/auth/interstitial");
-            }, 500);
+            console.log('[VERIFY] 6 digits entered, auto-verifying...');
+            // Verify OTP when 6 digits entered
+            verifyOtp(text);
         }
     };
+
+    const handleNext = () => {
+        console.log('[VERIFY] Next button pressed, code:', code);
+        if (code.length === 6) {
+            verifyOtp(code);
+        }
+    };
+
+    const handleEdit = () => {
+        console.log('[VERIFY] Edit pressed, going back');
+        router.back();
+    };
+
+    // Format phone number for display (mask middle digits)
+    const displayPhone = submittedPhoneNumber
+        ? submittedPhoneNumber.replace(/(\+91)(\d{2})(\d{4})(\d{4})/, "$1 $2****$4")
+        : "+91 ••••••••••";
 
     return (
         <SafeAreaView style={styles.container}>
@@ -51,8 +111,8 @@ export default function VerificationScreen() {
                     <Text style={styles.title}>Enter your verification{"\n"}code</Text>
 
                     <View style={styles.subtitleRow}>
-                        <Text style={styles.subtitle}>Sent to +91 8797020865 • </Text>
-                        <TouchableOpacity>
+                        <Text style={styles.subtitle}>Sent to {displayPhone} • </Text>
+                        <TouchableOpacity onPress={handleEdit}>
                             <Text style={styles.editLink}>Edit</Text>
                         </TouchableOpacity>
                     </View>
@@ -78,6 +138,7 @@ export default function VerificationScreen() {
                             value={code}
                             onChangeText={handleTextChange}
                             caretHidden
+                            editable={!isLoading}
                         />
                     </View>
                 </View>
@@ -89,11 +150,15 @@ export default function VerificationScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.fab, code.length < 6 && styles.fabDisabled]}
+                        style={[styles.fab, (code.length < 6 || isLoading) && styles.fabDisabled]}
                         onPress={handleNext}
-                        disabled={code.length < 6}
+                        disabled={code.length < 6 || isLoading}
                     >
-                        <Ionicons name="chevron-forward" size={28} color={code.length < 6 ? "#999" : "#fff"} />
+                        {isLoading ? (
+                            <ActivityIndicator color="#999" />
+                        ) : (
+                            <Ionicons name="chevron-forward" size={28} color={code.length < 6 ? "#999" : "#fff"} />
+                        )}
                     </TouchableOpacity>
                 </View>
             </KeyboardAvoidingView>
