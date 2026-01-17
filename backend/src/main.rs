@@ -61,18 +61,10 @@ async fn main() -> std::io::Result<()> {
                     .wrap(auth)
                     .route("/profile/me", web::get().to(profile::get_profile))
                     .route("/profile", web::post().to(profile::update_profile))
-                    .route(
-                        "/user/preferences",
-                        web::post().to(user::update_user_preference),
-                    )
-                    .route(
-                        "/profile/images",
-                        web::post().to(profile::upload_profile_images),
-                    )
-                    .route(
-                        "/profile/finalize",
-                        web::post().to(profile::finalize_profile),
-                    )
+                    .route("/user/preferences", web::post().to(user::update_user_preference))
+                    .route("/user/images", web::post().to(profile::upload_user_images))
+                    .route("/profile/images", web::post().to(profile::upload_profile_images))
+                    .route("/profile/finalize", web::post().to(profile::finalize_profile))
                     .route("/profile", web::delete().to(profile::delete_account))
                     .route("/feed", web::get().to(feed::get_feed))
                     .route("/interact", web::post().to(interactions::interact))

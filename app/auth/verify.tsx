@@ -14,6 +14,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { phoneConfirmation, submittedPhoneNumber } from "./phone";
 
 export default function VerificationScreen() {
     const router = useRouter();
@@ -22,38 +23,75 @@ export default function VerificationScreen() {
     const [code, setCode] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleVerify = async () => {
-        if (code.length < 6 || !params.verificationId) return;
+    console.log('[VERIFY] Screen mounted');
+    console.log('[VERIFY] phoneConfirmation exists:', !!phoneConfirmation);
+    console.log('[VERIFY] submittedPhoneNumber:', submittedPhoneNumber);
+
+    const verifyOtp = async (otpCode: string) => {
+        console.log('[VERIFY] verifyOtp called with code:', otpCode);
+
+        if (!phoneConfirmation) {
+            console.log('[VERIFY] ERROR: No phoneConfirmation object!');
+            Alert.alert("Error", "No verification session found. Please go back and try again.");
+            return;
+        }
+
+        console.log('[VERIFY] phoneConfirmation.verificationId:', phoneConfirmation.verificationId);
+        console.log('[VERIFY] Starting verification...');
 
         setIsLoading(true);
         try {
-            const response = await verify(params.verificationId, code);
+            console.log('[VERIFY] Calling phoneConfirmation.confirm()...');
+            const userCredential = await phoneConfirmation.confirm(otpCode);
 
-            // Navigate based on user status
-            if (response.user.is_new_user || !response.user.is_profile_complete) {
-                // New user or incomplete profile - go to name screen
-                router.push("/auth/name");
-            } else {
-                // Existing user with complete profile - go to main app
-                router.replace("/(tabs)");
-            }
-        } catch (error) {
-            Alert.alert("Error", error instanceof Error ? error.message : "Invalid verification code");
-            setCode("");
+            console.log('[VERIFY] SUCCESS: OTP verified!');
+            console.log('[VERIFY] User UID:', userCredential?.user?.uid);
+            console.log('[VERIFY] User phone:', userCredential?.user?.phoneNumber);
+            console.log('[VERIFY] Navigating to interstitial...');
+
+            // OTP verified successfully - navigate to next screen
+            router.push("/auth/interstitial");
+        } catch (error: any) {
+            console.log('[VERIFY] ERROR verifying OTP:');
+            console.log('[VERIFY] Error code:', error.code);
+            console.log('[VERIFY] Error message:', error.message);
+            console.log('[VERIFY] Full error:', JSON.stringify(error, null, 2));
+            Alert.alert(
+                "Verification Failed",
+                error.message || "Invalid code. Please try again."
+            );
         } finally {
+            console.log('[VERIFY] verifyOtp completed, setting loading to false');
             setIsLoading(false);
         }
     };
 
     const handleTextChange = (text: string) => {
+        console.log('[VERIFY] Code input changed:', text, 'length:', text.length);
         setCode(text);
-        if (text.length === 6 && !isLoading) {
-            // Auto-verify on 6 digits
-            setTimeout(() => {
-                handleVerify();
-            }, 300);
+        if (text.length === 6) {
+            console.log('[VERIFY] 6 digits entered, auto-verifying...');
+            // Verify OTP when 6 digits entered
+            verifyOtp(text);
         }
     };
+
+    const handleNext = () => {
+        console.log('[VERIFY] Next button pressed, code:', code);
+        if (code.length === 6) {
+            verifyOtp(code);
+        }
+    };
+
+    const handleEdit = () => {
+        console.log('[VERIFY] Edit pressed, going back');
+        router.back();
+    };
+
+    // Format phone number for display (mask middle digits)
+    const displayPhone = submittedPhoneNumber
+        ? submittedPhoneNumber.replace(/(\+91)(\d{2})(\d{4})(\d{4})/, "$1 $2****$4")
+        : "+91 ••••••••••";
 
     return (
         <SafeAreaView style={styles.container}>
@@ -75,8 +113,8 @@ export default function VerificationScreen() {
                     <Text style={styles.title}>Enter your verification{"\n"}code</Text>
 
                     <View style={styles.subtitleRow}>
-                        <Text style={styles.subtitle}>Sent to {params.phone || "your phone"} • </Text>
-                        <TouchableOpacity onPress={() => router.back()}>
+                        <Text style={styles.subtitle}>Sent to {displayPhone} • </Text>
+                        <TouchableOpacity onPress={handleEdit}>
                             <Text style={styles.editLink}>Edit</Text>
                         </TouchableOpacity>
                     </View>
@@ -120,7 +158,7 @@ export default function VerificationScreen() {
 
                     <TouchableOpacity
                         style={[styles.fab, (code.length < 6 || isLoading) && styles.fabDisabled]}
-                        onPress={handleVerify}
+                        onPress={handleNext}
                         disabled={code.length < 6 || isLoading}
                     >
                         {isLoading ? (

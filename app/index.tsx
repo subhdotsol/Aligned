@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import React, { useRef, useState } from "react";
 import {
+    Alert,
     Animated,
     Dimensions,
     Image,
@@ -11,6 +12,13 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import auth, { FirebaseAuthTypes, onAuthStateChanged } from '@react-native-firebase/auth';
+import { GoogleSignin, isErrorWithCode, statusCodes } from "@react-native-google-signin/google-signin";
+
+GoogleSignin.configure({
+    webClientId: '761529171367-2eh2930aibssqdgde798vu7en29libp1.apps.googleusercontent.com',
+    offlineAccess: true,
+});
 
 const { width, height } = Dimensions.get("window");
 
@@ -19,6 +27,17 @@ const videoSource = require("@/assets/video/bg.mp4");
 
 export default function LoginScreen() {
     const router = useRouter();
+    const [user, setUser] = React.useState<FirebaseAuthTypes.User | null>();
+
+    // check the current status of the application
+    function onAuthStatusChanged(user: FirebaseAuthTypes.User | null) {
+        setUser(user);
+    }
+
+    React.useEffect(() => {
+        const subscriber = onAuthStateChanged(auth(), onAuthStatusChanged);
+        return subscriber; // unsubscribe on unmount
+    }, []);
 
     // Create video player with expo-video
     const player = useVideoPlayer(videoSource, (player) => {
@@ -73,9 +92,86 @@ export default function LoginScreen() {
         });
     };
 
-    const handleGoogleSignIn = () => {
-        // Bypass for now - go directly to main app
-        router.replace("/(tabs)");
+    const handleGoogleSignIn = async () => {
+        console.log("DEBUG: handleGoogleSignIn called");
+
+        // If user is already logged in, skip sign-in
+        if (user) {
+            console.log("DEBUG: User Details", user);
+            console.log("DEBUG: user already logged in, skipping sign-in");
+            router.replace("/(tabs)");
+            return;
+        }
+
+        console.log("DEBUG: user is null, proceeding with sign-in");
+
+        try {
+            // Check if your device supports Google Play
+            console.log("DEBUG: Checking Play Services...");
+            await GoogleSignin.hasPlayServices({
+                showPlayServicesUpdateDialog: true,
+            });
+            console.log("DEBUG: Play Services OK");
+
+            console.log("DEBUG: Starting GoogleSignin.signIn()...");
+            const { type, data } = await GoogleSignin.signIn();
+            console.log("DEBUG: signIn result - type:", type, "data:", JSON.stringify(data, null, 2));
+
+            if (type === 'success') {
+                console.log("DEBUG: Sign-in success, creating Firebase credential...");
+                console.log("DEBUG: idToken exists:", !!data.idToken);
+
+                // Create a Google credential with the token
+                const googleCredential = auth.GoogleAuthProvider.credential(data.idToken);
+                console.log("DEBUG: Credential created, signing into Firebase...");
+
+                // Sign-in the user with the credential
+                let value = await auth().signInWithCredential(googleCredential);
+                console.log("DEBUG: Firebase sign-in successful!");
+
+                if (value) {
+                    console.log('DEBUG: additionalUserInfo:', JSON.stringify(value.additionalUserInfo, null, 2));
+                    console.log('DEBUG: user:', JSON.stringify(value.user, null, 2));
+                }
+
+                router.replace("/(tabs)");
+            } else if (type === 'cancelled') {
+                console.log("DEBUG: User cancelled sign-in");
+                return; // do nothing
+            }
+
+        } catch (error: any) {
+            // Log the full error for debugging
+            console.error("DEBUG: Full error object:", error);
+            console.error("DEBUG: Error code:", error?.code);
+            console.error("DEBUG: Error message:", error?.message);
+
+            if (isErrorWithCode(error)) {
+                switch (error.code) {
+                    case statusCodes.SIGN_IN_CANCELLED:
+                        Alert.alert("Sign In Cancelled", "User cancelled the login flow. Please try again.");
+                        break;
+                    case statusCodes.IN_PROGRESS:
+                        Alert.alert("Please Wait", "Sign In already in progress.");
+                        break;
+                    case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
+                        Alert.alert("Play Services Error", "Play services not available or outdated. Please update.");
+                        break;
+                    default:
+                        // Show the actual error code and message
+                        Alert.alert(
+                            "Sign In Error",
+                            `Error code: ${error.code}\nMessage: ${error.message || 'Unknown error'}`
+                        );
+                }
+            } else {
+                // Show Firebase or other error details
+                Alert.alert(
+                    "Error",
+                    `${error?.message || 'An unknown error occurred'}\n\nCode: ${error?.code || 'N/A'}`
+                );
+            }
+        }
     };
 
     const handlePhoneSignIn = () => {

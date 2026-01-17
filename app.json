@@ -13,11 +13,12 @@
       "backgroundColor": "#ffffff"
     },
     "newArchEnabled": true,
-    "ios": {
+    "ios": { 
       "supportsTablet": true,
       "bundleIdentifier": "com.subhdotsol.aligned"
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/icons/logo.png",

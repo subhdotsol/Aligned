@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+    Alert,
     ScrollView,
     StyleSheet,
     Switch,
@@ -10,6 +11,7 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import auth from '@react-native-firebase/auth';
 
 export default function Settings() {
     const router = useRouter();
@@ -23,6 +25,30 @@ export default function Settings() {
     const SectionHeader = ({ title }: { title: string }) => (
         <Text style={styles.sectionHeader}>{title}</Text>
     );
+
+    const signOutHandler = React.useCallback(async () => {
+        console.log("DEBUG: logout handler is called")
+        try {
+            Alert.alert("LOGOUT", "confirm you want to logout", [{
+                text: "Cancel",
+                onPress: () => console.log("Cancel Pressed"),
+                style: "cancel",
+            },
+            {
+                text: "Logout",
+                onPress: () => {
+                    auth().signOut().then(() => {
+                        console.log("DEBUG: User signed out")
+                        router.replace("/")
+                    })
+                }
+            }])
+
+
+        } catch (error) {
+            console.log("DEBUG: Error signing out", error)
+        }
+    }, [])
 
     const SettingItem = ({
         title,
@@ -234,7 +260,7 @@ export default function Settings() {
 
                     {/* Footer Actions */}
                     <View style={styles.footer}>
-                        <TouchableOpacity style={styles.footerButton}>
+                        <TouchableOpacity style={styles.footerButton} onPress={signOutHandler}>
                             <Text style={styles.footerButtonText}>Log Out</Text>
                         </TouchableOpacity>
                         <View style={styles.divider} />

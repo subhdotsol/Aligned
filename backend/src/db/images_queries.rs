@@ -67,3 +67,44 @@ pub async fn get_images(pool: &PgPool, user_id: &Uuid) -> Result<Vec<(Uuid, Stri
 
     Ok(rows)
 }
+
+use std::fs;
+use std::path::Path;
+
+use actix_multipart::form::{MultipartForm, json::Json as MpJson, tempfile::TempFile};
+use actix_web::{HttpResponse, Responder};
+use serde::Deserialize;
+
+use crate::models::outputs::StatusResponse;
+
+#[derive(Deserialize, Debug)]
+struct Metadata {
+    name: String,
+}
+
+#[derive(Debug, MultipartForm)]
+pub struct ImageUpload {
+    #[multipart(limit = "50mb")]
+    file: TempFile,
+    metadata: MpJson<Metadata>,
+}
+
+pub async fn upload_image_file(MultipartForm(form): MultipartForm<ImageUpload>) -> impl Responder {
+    let file_name = form.file.file_name.as_ref().map(|s| s.as_str()).unwrap_or("file upload error");
+
+    let dest_path = Path::new("./uploads").join(file_name);
+
+    match fs::copy(form.file.file.path(), &dest_path) {
+        Ok(_) => {
+            println!("File Uploaded!!!!");
+            HttpResponse::Ok().json(StatusResponse {
+                status: "success".to_string(),
+                message: Some("File uploaded successfully".to_string()),
+            })
+        },
+        Err(_e) => HttpResponse::InternalServerError().json(StatusResponse {
+            status: "error".to_string(),
+            message: Some("Failed to upload file".to_string()),
+        })
+    }
+}
